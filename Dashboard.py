@@ -81,9 +81,18 @@ humGauge = go.Figure(go.Indicator(
 
 app.layout = html.Div(children=[
     html.H1(children='IoT Dashboard'),
+    html.H2(children='Turn On or Off the Light'),
     html.Button('Toggle Light', id='led_button', value='toggle_light', n_clicks=0),
-    html.Br(),
     html.Div(id='led_output'),
+    html.Br(),
+    html.H2(children='Fan Control'),
+    dcc.Input(type='number'),
+    html.Button('Confirm Threshold', id='fan_threshold', value='fan_control', n_clicks=0),
+    html.Br(),
+    html.H2(children='Automatic Light Control'),
+    dcc.Input(type='number'),
+    html.Button('Confirm Threshold', id='light_threshold', value='light_control', n_clicks=0),
+    html.Br(),
     dcc.Graph(id='tempGauge', figure=tempGauge),
     dcc.Graph(id='humGauge', figure=humGauge),
     dcc.Interval(id = 'intervalComponent', interval = 1 * 3000, n_intervals = 0)
