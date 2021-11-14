@@ -2,7 +2,7 @@ import plotly.graph_objects as go
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import RPi.GPIO as GPIO
 import board, adafruit_dht
 import smtplib, ssl, email, imaplib
@@ -16,6 +16,7 @@ global currentHumidity
 global led
 global tempThresh
 global lightThresh
+global setTempThresh
 
 dhtDevice = adafruit_dht.DHT11(board.D26)
 
@@ -29,6 +30,8 @@ Motor1B = 27
 Motor1E = 22
 
 led = 13
+
+setTempThresh = False
  
 GPIO.setup(led, GPIO.OUT)
 
@@ -48,9 +51,32 @@ def ledToggle(n_clicks):
 def getDHTinfo():
     currentTemp = dhtDevice.temperature
     currentHumidity = dhtDevice.humidity
+    if(currentTemp >= tempThresh && setTempthresh):
+        sendEmail("Temperature exceeds threshhold, would you like to turn on fan?")
+        noReply = True
+        while(noReply):
+            reply = receiveEmailChecker()
+            if(reply != "Nothing"):
+                noReply = False
+                
+        if(reply == "yes"):
+            turnOnFan()
+            
     info = [currentTemp, currentHumidity]
     return info
 
+def turnOnFan():
+    GPIO.setup(Motor1A,GPIO.OUT)
+    GPIO.setup(Motor1B,GPIO.OUT)
+    GPIO.setup(Motor1E,GPIO.OUT)
+    GPIO.output(Motor1A, GPIO.HIGH)
+
+def turnOffFan():
+    GPIO.setup(Motor1A,GPIO.OUT)
+    GPIO.setup(Motor1B,GPIO.OUT)
+    GPIO.setup(Motor1E,GPIO.OUT)
+    GPIO.output(Motor1A, GPIO.LOW)
+    
 def sendEmail(text):
     sender ="dantelomonaco.iot@gmail.com"
     password = "vanieriotemail321"
@@ -89,13 +115,9 @@ def receiveEmailChecker() :
             text = decoded_data.get_payload()[0].get_payload();
             answer1 = text[0:3].lower()
             answer2 = text[0:2].lower()
-            if(answer1 == "yes"):
-                GPIO.setup(Motor1A,GPIO.OUT)
-                GPIO.setup(Motor1B,GPIO.OUT)
-                GPIO.setup(Motor1E,GPIO.OUT)
-                GPIO.output(Motor1A, GPIO.HIGH)
+            if(str(answer1) == "yes" or str(answer2) == "yes"):
                 return "yes"
-            elif(answer1 == "no"):
+            elif(str(answer1) == "no" or str(answer2) == "no"):
                 return "no"
             else:
                 return "Invalid"
@@ -167,15 +189,17 @@ app.layout = html.Div(children=[
 def update_led_output_div(n):
     return '{}'.format(str(ledToggle(n)))
 
-# @app.callback(
-#     Output('hidden-div', 'children'),
-#     [Input('fan_button', 'n_clicks')],
-#     [State('fan_input','value')],
-#     )
-# def update_threshhold_output_div(clicks, input_value):
-#     if clicks is not None:
-#         print(clicks, input_value)
-
+@app.callback(
+    Output('hidden-div', 'children'),
+    [Input('fan_button', 'n_clicks')],
+    [State('fan_input','value')],
+    )
+def update_threshhold_output_div(clicks, input_value):
+    if clicks is not None:
+        global tempThresh
+        tempThresh = input_value
+        setTempThresh = True
+    return input_value
 
 @app.callback([
     Output('tempGauge', 'figure'),
