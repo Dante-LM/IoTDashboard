@@ -17,8 +17,9 @@ global led
 global tempThresh
 global lightThresh
 global setTempThresh
+global fanIsOn
 
-dhtDevice = adafruit_dht.DHT11(board.D26)
+dhtDevice = adafruit_dht.DHT11(board.D6)
 
 app = dash.Dash(__name__)
 
@@ -31,7 +32,9 @@ Motor1E = 22
 
 led = 13
 
+tempThresh = 0
 setTempThresh = False
+fanIsOn = False
  
 GPIO.setup(led, GPIO.OUT)
 
@@ -51,36 +54,46 @@ def ledToggle(n_clicks):
 def getDHTinfo():
     currentTemp = dhtDevice.temperature
     currentHumidity = dhtDevice.humidity
-    if(currentTemp >= tempThresh && setTempthresh):
+    if(currentTemp >= tempThresh and setTempThresh and not fanIsOn):
         sendEmail("Temperature exceeds threshhold, would you like to turn on fan?")
         noReply = True
         while(noReply):
+            global setTempThresh
+            setTempThresh = False
             reply = receiveEmailChecker()
             if(reply != "Nothing"):
                 noReply = False
                 
         if(reply == "yes"):
+            print("its not calling this")
             turnOnFan()
             
     info = [currentTemp, currentHumidity]
     return info
 
 def turnOnFan():
+    global fanIsOn
+    fanIsOn = True
+    print("im here")
     GPIO.setup(Motor1A,GPIO.OUT)
     GPIO.setup(Motor1B,GPIO.OUT)
     GPIO.setup(Motor1E,GPIO.OUT)
-    GPIO.output(Motor1A, GPIO.HIGH)
+    pulse = GPIO.PWM(22,100)
+    pulse.start(10)
+
 
 def turnOffFan():
+    global fanIsOn
+    fanIsOn = False
     GPIO.setup(Motor1A,GPIO.OUT)
     GPIO.setup(Motor1B,GPIO.OUT)
     GPIO.setup(Motor1E,GPIO.OUT)
     GPIO.output(Motor1A, GPIO.LOW)
     
 def sendEmail(text):
-    sender ="dantelomonaco.iot@gmail.com"
-    password = "vanieriotemail321"
-    receiver = "dantelomonaco.iot2@gmail.com"
+    sender ="griffinchris396@gmail.com"
+    password = "stupidshit4"
+    receiver = "daleevan15@gmail.com"
     port = 465
     subject = "From Dante's RPI"
     message = 'Subject: {}\n\n{}'.format(subject, text)
@@ -95,7 +108,7 @@ def sendEmail(text):
 def receiveEmailChecker() :
     while True:
         mail = imaplib.IMAP4_SSL('imap.gmail.com')
-        mail.login('dantelomonaco.iot@gmail.com', 'vanieriotemail321')
+        mail.login('griffinchris396@gmail.com', 'stupidshit4')
         mail.list()
         mail.select("inbox") # connect to inbox.
         result, data = mail.search(None, "(UNSEEN)")
@@ -198,6 +211,7 @@ def update_threshhold_output_div(clicks, input_value):
     if clicks is not None:
         global tempThresh
         tempThresh = input_value
+        global setTempThresh
         setTempThresh = True
     return input_value
 
