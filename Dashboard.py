@@ -11,15 +11,8 @@ import time
 
 #external_stylesheets = ['']
 
-global currentTemp
-global currentHumidity
-global led
-global tempThresh
-global lightThresh
-global setTempThresh
-global fanIsOn
-
-dhtDevice = adafruit_dht.DHT11(board.D6)
+dhtDevice = adafruit_dht.DHT11(board.D13
+                               )
 
 app = dash.Dash(__name__)
 
@@ -32,7 +25,7 @@ Motor1E = 22
 
 led = 13
 
-tempThresh = 0
+tempThresh = 30
 setTempThresh = False
 fanIsOn = False
  
@@ -54,19 +47,20 @@ def ledToggle(n_clicks):
 def getDHTinfo():
     currentTemp = dhtDevice.temperature
     currentHumidity = dhtDevice.humidity
-    if(currentTemp >= tempThresh and setTempThresh and not fanIsOn):
+    global setTempThresh
+    if(currentTemp > tempThresh and setTempThresh and not fanIsOn): 
         sendEmail("Temperature exceeds threshhold, would you like to turn on fan?")
         noReply = True
+        setTempThresh = False
         while(noReply):
-            global setTempThresh
-            setTempThresh = False
             reply = receiveEmailChecker()
             if(reply != "Nothing"):
                 noReply = False
+                if(reply == "yes"):
+                    turnOnFan()
+                    
                 
-        if(reply == "yes"):
-            print("its not calling this")
-            turnOnFan()
+
             
     info = [currentTemp, currentHumidity]
     return info
@@ -74,12 +68,13 @@ def getDHTinfo():
 def turnOnFan():
     global fanIsOn
     fanIsOn = True
-    print("im here")
     GPIO.setup(Motor1A,GPIO.OUT)
     GPIO.setup(Motor1B,GPIO.OUT)
     GPIO.setup(Motor1E,GPIO.OUT)
     pulse = GPIO.PWM(22,100)
     pulse.start(10)
+    time.sleep(3)
+    turnOffFan()
 
 
 def turnOffFan():
@@ -223,6 +218,7 @@ def update_threshhold_output_div(clicks, input_value):
 )
 def update_temp_gauge(n_intervals):
     info = getDHTinfo()
+    
     print(info)
     tempGauge = go.Figure(go.Indicator(
     mode = "gauge+number+delta",
