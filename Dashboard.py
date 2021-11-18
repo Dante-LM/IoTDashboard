@@ -8,11 +8,16 @@ import board, adafruit_dht
 import smtplib, ssl, email, imaplib
 from time import sleep
 import time
+from paho.mqtt import client as mqtt_client
 
 #external_stylesheets = ['']
 
-dhtDevice = adafruit_dht.DHT11(board.D13
-                               )
+broker = 'localhost'
+port = 1883
+topic = "/Dashboard"
+client_id = '1'
+
+dhtDevice = adafruit_dht.DHT11(board.D21)
 
 app = dash.Dash(__name__)
 
@@ -30,6 +35,30 @@ setTempThresh = False
 fanIsOn = False
  
 GPIO.setup(led, GPIO.OUT)
+
+def connect_mqtt():
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print("Connected to MQTT Broker!")
+        else:
+            print("Failed to connect, return code %d\n", rc)
+    # Set Connecting Client ID
+    client = mqtt_client.Client(client_id)
+#     client.username_pw_set(username, password)
+    client.on_connect = on_connect
+    client.connect(broker, port)
+    return client
+
+def subscribe(client: mqtt_client):
+    def on_message(client, userdata, msg):
+        print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+
+    client.subscribe(topic)
+    client.on_message = on_message
+
+def run_mqtt():
+    client = connect_mqtt()
+    subscribe(client)
 
 def ledToggle(n_clicks):
     
@@ -86,9 +115,9 @@ def turnOffFan():
     GPIO.output(Motor1A, GPIO.LOW)
     
 def sendEmail(text):
-    sender ="griffinchris396@gmail.com"
-    password = "stupidshit4"
-    receiver = "daleevan15@gmail.com"
+    sender ="dantelomonaco.iot@gmail.com"
+    password = "vanieriotemail321"
+    receiver = "dantelomonaco.iot2@gmail.com"
     port = 465
     subject = "From Dante's RPI"
     message = 'Subject: {}\n\n{}'.format(subject, text)
@@ -103,7 +132,7 @@ def sendEmail(text):
 def receiveEmailChecker() :
     while True:
         mail = imaplib.IMAP4_SSL('imap.gmail.com')
-        mail.login('griffinchris396@gmail.com', 'stupidshit4')
+        mail.login('dantelomonaco.iot@gmail.com', 'vanieriotemail321')
         mail.list()
         mail.select("inbox") # connect to inbox.
         result, data = mail.search(None, "(UNSEEN)")
@@ -129,14 +158,13 @@ def receiveEmailChecker() :
                 return "no"
             else:
                 return "Invalid"
-
     
 info = getDHTinfo()
 
 tempGauge = go.Figure(go.Indicator(
     mode = "gauge+number+delta",
     value = info[0],
-    domain = {'x': [0,1], 'y':[0,1]},
+    domain = {'x': [0,0.5], 'y':[0,0.5]},
     title = {'text':'Temperature'},
     gauge = {
             'axis':{'range':[-40,50]},
@@ -155,7 +183,7 @@ tempGauge = go.Figure(go.Indicator(
 humGauge = go.Figure(go.Indicator(
     mode = "gauge+number+delta",
     value = info[1],
-    domain = {'x': [0,1], 'y':[0,1]},
+    domain = {'x': [0,0.5], 'y':[0,0.5]},
     title = {'text':'Humidity'},
     gauge = {
             'axis':{'range':[0,100]},
@@ -174,7 +202,7 @@ app.layout = html.Div(children=[
     html.Br(),
     
     html.H2(children='Fan Control'),
-    dcc.Input(id='fan_input', type='number'),
+    dcc.Input(id='fan_input', type='number', placeholder=tempThresh),
     html.Button('Confirm Threshold', id='fan_button', value='fan_control', n_clicks=0),
     html.Br(),
     
@@ -217,13 +245,14 @@ def update_threshhold_output_div(clicks, input_value):
    
 )
 def update_temp_gauge(n_intervals):
-    info = getDHTinfo()
+    run_mqtt()
     
+    info = getDHTinfo()
     print(info)
     tempGauge = go.Figure(go.Indicator(
     mode = "gauge+number+delta",
     value = info[0],
-    domain = {'x': [0,1], 'y':[0,1]},
+    domain = {'x': [0,0.5], 'y':[0,0.5]},
     title = {'text':'Temperature'},
     gauge = {
             'axis':{'range':[-40,50]},
@@ -241,7 +270,7 @@ def update_temp_gauge(n_intervals):
     humGauge = go.Figure(go.Indicator(
     mode = "gauge+number+delta",
     value = info[1],
-    domain = {'x': [0,1], 'y':[0,1]},
+    domain = {'x': [0,0.5], 'y':[0,0.5]},
     title = {'text':'Humidity'},
     gauge = {
             'axis':{'range':[0,100]},
