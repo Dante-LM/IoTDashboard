@@ -1,7 +1,7 @@
 // Serial.begin(x) set rate
 // analogRead(pin) set pin
 // Serial.print(val) print data to serial port
-int led = 2;
+int led = 16;
 
 void setup() {
   Serial.begin(9600);
