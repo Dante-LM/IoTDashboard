@@ -7,14 +7,14 @@ import RPi.GPIO as GPIO
 import board, adafruit_dht
 import smtplib, ssl, email, imaplib
 from time import sleep
-import time
+import time, sys
 from paho.mqtt import client as mqtt_client
 
 #external_stylesheets = ['']
 
 broker = 'localhost'
 port = 1883
-topic = "/Dashboard"
+topic = "SmartHome/Dashboard"
 client_id = '1'
 
 dhtDevice = adafruit_dht.DHT11(board.D21)
@@ -29,13 +29,16 @@ Motor1B = 27
 Motor1E = 22
 
 led = 13
+autoLed = 26
 
 tempThresh = 30
 setTempThresh = False
 fanIsOn = False
- 
-GPIO.setup(led, GPIO.OUT)
 
+GPIO.setup(led, GPIO.OUT)
+GPIO.setup(autoLed, GPIO.OUT)
+
+# https://www.emqx.com/en/blog/how-to-use-mqtt-in-python
 def connect_mqtt():
     def on_connect(client, userdata, flags, rc):
         if rc == 0:
@@ -52,13 +55,14 @@ def connect_mqtt():
 def subscribe(client: mqtt_client):
     def on_message(client, userdata, msg):
         print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-
+    
     client.subscribe(topic)
     client.on_message = on_message
 
 def run_mqtt():
     client = connect_mqtt()
     subscribe(client)
+    client.loop_forever()
 
 def ledToggle(n_clicks):
     
@@ -164,7 +168,7 @@ info = getDHTinfo()
 tempGauge = go.Figure(go.Indicator(
     mode = "gauge+number+delta",
     value = info[0],
-    domain = {'x': [0,0.5], 'y':[0,0.5]},
+    domain = {'x': [0,1], 'y':[0,1]},
     title = {'text':'Temperature'},
     gauge = {
             'axis':{'range':[-40,50]},
@@ -183,7 +187,7 @@ tempGauge = go.Figure(go.Indicator(
 humGauge = go.Figure(go.Indicator(
     mode = "gauge+number+delta",
     value = info[1],
-    domain = {'x': [0,0.5], 'y':[0,0.5]},
+    domain = {'x': [0,1], 'y':[0,1]},
     title = {'text':'Humidity'},
     gauge = {
             'axis':{'range':[0,100]},
@@ -207,7 +211,7 @@ app.layout = html.Div(children=[
     html.Br(),
     
     html.H2(children='Automatic Light Control'),
-    dcc.Input(type='number'),
+    dcc.Input(type='number', placeholder='50'),
     html.Button('Confirm Threshold', id='light_threshold', value='light_control', n_clicks=0),
     html.Br(),
     
@@ -245,14 +249,13 @@ def update_threshhold_output_div(clicks, input_value):
    
 )
 def update_temp_gauge(n_intervals):
-    run_mqtt()
     
     info = getDHTinfo()
     print(info)
     tempGauge = go.Figure(go.Indicator(
     mode = "gauge+number+delta",
     value = info[0],
-    domain = {'x': [0,0.5], 'y':[0,0.5]},
+    domain = {'x': [0,1], 'y':[0,1]},
     title = {'text':'Temperature'},
     gauge = {
             'axis':{'range':[-40,50]},
@@ -270,7 +273,7 @@ def update_temp_gauge(n_intervals):
     humGauge = go.Figure(go.Indicator(
     mode = "gauge+number+delta",
     value = info[1],
-    domain = {'x': [0,0.5], 'y':[0,0.5]},
+    domain = {'x': [0,1], 'y':[0,1]},
     title = {'text':'Humidity'},
     gauge = {
             'axis':{'range':[0,100]},
@@ -285,3 +288,4 @@ def update_temp_gauge(n_intervals):
 
 if __name__ == '__main__':
     app.run_server()
+    run_mqtt()

@@ -1,0 +1,91 @@
+Raddec {
+  transmitterId: '112233445566',
+  transmitterIdType: 2,
+  rssiSignature:
+   [ { receiverId: '000000000000',
+       receiverIdType: 2,
+       rssi: -70,
+       numberOfDecodings: 1,
+       rssiSum: -70 } ],
+  packets:
+   [ '061b66554433221102010611074449555520657669746341796c656572' ],
+  earliestDecodingTime: 1638477329790,
+  creationTime: 1638477329795 }
+Raddec {
+  transmitterId: '112233445566',
+  transmitterIdType: 2,
+  rssiSignature:
+   [ { receiverId: '000000000000',
+       receiverIdType: 2,
+       rssi: -71,
+       numberOfDecodings: 1,
+       rssiSum: -71 } ],
+  packets:
+   [ '061b66554433221102010611074449555520657669746341796c656572' ],
+  earliestDecodingTime: 1638477330793,
+  creationTime: 1638477330794 }
+Raddec {
+  transmitterId: '112233445566',
+  transmitterIdType: 2,
+  rssiSignature:
+   [ { receiverId: '000000000000',
+       receiverIdType: 2,
+       rssi: -72,
+       numberOfDecodings: 1,
+       rssiSum: -72 } ],
+  packets:
+   [ '061b66554433221102010611074449555520657669746341796c656572' ],
+  earliestDecodingTime: 1638477331794,
+  creationTime: 1638477331794 }
+Raddec {
+  transmitterId: '112233445566',
+  transmitterIdType: 2,
+  rssiSignature:
+   [ { receiverId: '000000000000',
+       receiverIdType: 2,
+       rssi: -72,
+       numberOfDecodings: 1,
+       rssiSum: -72 } ],
+  packets:
+   [ '061b66554433221102010611074449555520657669746341796c656572' ],
+  earliestDecodingTime: 1638477332795,
+  creationTime: 1638477332796 }
+Raddec {
+  transmitterId: '112233445566',
+  transmitterIdType: 2,
+  rssiSignature:
+   [ { receiverId: '000000000000',
+       receiverIdType: 2,
+       rssi: -70,
+       numberOfDecodings: 1,
+       rssiSum: -70 } ],
+  packets:
+   [ '061b66554433221102010611074449555520657669746341796c656572' ],
+  earliestDecodingTime: 1638477333797,
+  creationTime: 1638477333797 }
+Raddec {
+  transmitterId: '112233445566',
+  transmitterIdType: 2,
+  rssiSignature:
+   [ { receiverId: '000000000000',
+       receiverIdType: 2,
+       rssi: -68,
+       numberOfDecodings: 1,
+       rssiSum: -68 } ],
+  packets:
+   [ '061b66554433221102010611074449555520657669746341796c656572' ],
+  earliestDecodingTime: 1638477334799,
+  creationTime: 1638477334799 }
+Raddec {
+  transmitterId: '112233445566',
+  transmitterIdType: 2,
+  rssiSignature:
+   [ { receiverId: '000000000000',
+       receiverIdType: 2,
+       rssi: -70,
+       numberOfDecodings: 1,
+       rssiSum: -70 } ],
+  packets:
+   [ '061b66554433221102010611074449555520657669746341796c656572' ],
+  earliestDecodingTime: 1638477335800,
+  creationTime: 1638477335801 }
