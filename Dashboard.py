@@ -11,13 +11,15 @@ from time import sleep
 import time, sys
 import threading as thread
 from paho.mqtt import client as mqtt_client
+import mariadb
 
 # external_stylesheets = ['']
 
 # Info to connect to the MQTT Broker 
 broker = 'localhost'
 port = 1883
-topic = "SmartHome/Dashboard"
+lightTopic = "SmartHome/Dashboard/lightValue"
+rfidTopic = "SmartHome/Dashboard/rfid"
 client_id = '1'
 
 # Setting the GPIO pin for the DHT11 temperature/humidity sensor
@@ -66,23 +68,34 @@ def connect_mqtt():
     client.connect(broker, port)
     return client
 
-# Fetches the info of the DHT11 and RFID reader from the MQTT broker
-def subscribe(client: mqtt_client):
+# Fetches the info for the current liht level from the MQTT broker
+def subscribeLight(client: mqtt_client):
     # Assigns the info to variables
     def on_message(client, userdata, msg):
 #         print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-        global lightLevel, lightPercent
+        global lightLevel, lightPercent, lightThresh
         lightLevel = int(msg.payload.decode())
         lightPercent = round((lightLevel / 1024) * 100)
-#         print(f"LightLevel: {lightLevel} LightPercent: {lightPercent}")
+#         print(f"LightLevel: {lightLevel} LightPercent: {lightPercent} LightThresh: {lightThresh}")
     
-    client.subscribe(topic)
+    client.subscribe(lightTopic)
+    client.on_message = on_message
+    
+# Fetches the info for the RFID from the MQTT broker
+def subscribeRfid(client: mqtt_client):
+    # Assigns the info to variables
+    def on_message(client, userdata, msg):
+        if(msg.topic == "SmartHome/Dashboard/rfid"):
+            print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+            checkUser(msg.payload.decode())
+    client.subscribe(rfidTopic)
     client.on_message = on_message
 
 # Creates a client and connects it to the broker
 def run_mqtt():
     client = connect_mqtt()
-    subscribe(client)
+    subscribeLight(client)
+    subscribeRfid(client)
     client.loop_forever()
 
 # Receives info from the LED button on the dashboard to toggle the LED on or off
@@ -148,27 +161,28 @@ def lightLevelCheck(currentPercent):
         GPIO.output(autoLed, 0)
         
 
-# def checkUser(rfidValue):
-#     conn = mariadb.connect(
-#     user="root",
-#     password="",
-#     host="localhost",
-#     database="IoT")
-#  
-#     cursor = mydb.cursor()
-#     cursor.execute("SELECT * FROM users WHERE rfid =?", (rfidValue,))
-#     valid = cursor.fetchone()
-#     if(valid is not None):
-#         global name, temp, setTempThresh, setLightThresh, lightThresh, tempThresh
-#         name = valid[1]
-#         lightThresh = valid[2]
-#         tempThresh = valid[3]
-#         
-#         setTempThresh = True
-#         setLightThresh = False
-#     else:
-#         ringBuzzer()
-# 
+def checkUser(rfidValue):
+    conn = mariadb.connect(
+    user="root",
+    password="",
+    host="localhost",
+    database="IoT")
+ 
+    cursor = mydb.cursor()
+    cursor.execute("SELECT * FROM users WHERE rfid =?", (rfidValue,))
+    valid = cursor.fetchone()
+    if(valid is not None):
+        print("valid user")
+        global name, temp, setTempThresh, setLightThresh, lightThresh, tempThresh
+        name = valid[1]
+        lightThresh = valid[2]
+        tempThresh = valid[3]
+        
+        setTempThresh = True
+        setLightThresh = False
+    else:
+        ringBuzzer()
+
 def ringBuzzer():
     GPIO.output(buzzer,GPIO.HIGH)
     time.sleep(3)
@@ -331,6 +345,9 @@ def update_output(value):
     dash.dependencies.Output('light_input_value', 'children'),
     [dash.dependencies.Input('light_input', 'value')])
 def update_output(value):
+    global lightThresh, lightPercent
+    lightThresh = value
+    lightLevelCheck(lightPercent)
     return 'You have selected "{}"'.format(value)
 
 # Update the temperature and humidity gauges every 3 seconds

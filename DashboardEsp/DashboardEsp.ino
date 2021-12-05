@@ -63,20 +63,6 @@ void setup() {
   client.setServer(mqtt_server, 1883);
 }
 
-void readLight(){
-
-  int value = analogRead(A0);
-  valueString = String(value);
-  int str_len = valueString.length()+1;
-  char value_array[str_len];
-  valueString.toCharArray(value_array, str_len);
-  client.publish("SmartHome/Dashboard", value_array);
-  valueString = "";
-  
-  Serial.println("Analog Value: ");
-  Serial.println(value);
-}
-
 void loop() {
 
   if (!client.connected()) {
@@ -84,20 +70,32 @@ void loop() {
   }
   if(!client.loop())
     client.connect("vanieriot");
+    int value = analogRead(A0);
+    valueString = String(value);
+    int str_len = valueString.length()+1;
+    char value_array[str_len];
+    valueString.toCharArray(value_array, str_len);
+    client.publish("SmartHome/Dashboard/lightValue", value_array);
+    valueString = "";
     
-//  readLight();
+    Serial.println("Analog Value: ");
+    Serial.println(value);
 
-  if (!rfid.PICC_IsNewCardPresent())
+    if ( ! rfid.PICC_IsNewCardPresent())
       return;
-  if (rfid.PICC_ReadCardSerial()) {
-    for (byte i = 0; i < 4; i++) {
-      tag += rfid.uid.uidByte[i];
+    if (rfid.PICC_ReadCardSerial()) {
+      for (byte i = 0; i < 4; i++) {
+        tag += rfid.uid.uidByte[i];
+      }
+      Serial.println(tag);
+      int str_len = tag.length()+1;
+      char tag_array[str_len];
+      tag.toCharArray(tag_array, str_len);
+      client.publish("SmartHome/Dashboard/rfid", tag_array);
+      tag = "";
+      rfid.PICC_HaltA();
+      rfid.PCD_StopCrypto1();
     }
-    Serial.println(tag);
-    tag = "";
-    rfid.PICC_HaltA();
-    rfid.PCD_StopCrypto1();
-  }
     
-    delay(3000);
+  delay(3000);
 }
