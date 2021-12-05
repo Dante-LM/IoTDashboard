@@ -2,6 +2,7 @@ import plotly.graph_objects as go
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_daq as daq
 from dash.dependencies import Input, Output, State
 import RPi.GPIO as GPIO
 import board, adafruit_dht
@@ -39,6 +40,7 @@ led = 13
 
 autoLed = 26
 lightLevel = 512
+lightPercent = 50
 lightThresh = 50
 setLightThresh = False
 
@@ -68,10 +70,10 @@ def subscribe(client: mqtt_client):
     # Assigns the info to variables
     def on_message(client, userdata, msg):
 #         print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-        global lightLevel
+        global lightLevel, lightPercent
         lightLevel = int(msg.payload.decode())
-        lightPercent = (lightLevel / 1024) * 100
-        print(f"LightLevel: {lightLevel} LightPercent: {lightPercent}")
+        lightPercent = round((lightLevel / 1024) * 100)
+#         print(f"LightLevel: {lightLevel} LightPercent: {lightPercent}")
     
     client.subscribe(topic)
     client.on_message = on_message
@@ -114,7 +116,6 @@ def getDHTinfo():
                     turnOnFan()
                     
     info = [currentTemp, currentHumidity]
-    print(info)
     return info
 
 # Turns the motor on
@@ -138,6 +139,14 @@ def turnOffFan():
     GPIO.setup(Motor1E,GPIO.OUT)
     GPIO.output(Motor1A, GPIO.LOW)
 
+# Checks if the current light level is below the threshold. Turns on the lights if it is
+def lightLevelCheck(currentPercent):
+    global lightThresh
+    if(currentPercent < lightThresh):
+        GPIO.output(autoLed, 1)
+    else:
+        GPIO.output(autoLed, 0)
+        
 
 # def checkUser(rfidValue):
 #     conn = mariadb.connect(
@@ -150,12 +159,7 @@ def turnOffFan():
 #     cursor.execute("SELECT * FROM users WHERE rfid =?", (rfidValue,))
 #     valid = cursor.fetchone()
 #     if(valid is not None):
-#         global name
-#         global temp
-#         global setTempThresh
-#         global setLightThresh
-#         global lightThresh
-#         global tempThresh
+#         global name, temp, setTempThresh, setLightThresh, lightThresh, tempThresh
 #         name = valid[1]
 #         lightThresh = valid[2]
 #         tempThresh = valid[3]
@@ -270,17 +274,27 @@ app.layout = html.Div(children=[
     html.Br(),
     
     html.H2(children='Fan Control'),
-    dcc.Input(id='fan_input', type='number', placeholder=tempThresh),
-    html.Button('Confirm Threshold', id='fan_button', value='fan_control', n_clicks=0),
+    
+    dcc.Slider(id='fan_input', min=-40, max=50, step=1, value=30,),
+    html.Div(id='fan_input_value'),
+    
+#     dcc.Input(id='fan_input', type='number', placeholder=tempThresh),
+#     html.Button('Confirm Threshold', id='fan_button', value='fan_control', n_clicks=0),
     html.Br(),
     
     html.H2(children='Automatic Light Control'),
-    dcc.Input(id='light_input', type='number', placeholder='50'),
-    html.Button('Confirm Threshold', id='light_threshold', value='light_control', n_clicks=0),
+    
+    dcc.Slider(id='light_input', min=0, max=100, step=1, value=50,),
+    html.Div(id='light_input_value'),
+    
+#     dcc.Input(id='light_input', type='number', placeholder='50'),
+#     html.Button('Confirm Threshold', id='light_threshold', value='light_control', n_clicks=0),
     html.Br(),
     
     dcc.Graph(id='tempGauge', figure=tempGauge),
     dcc.Graph(id='humGauge', figure=humGauge),
+    daq.Gauge(id='lightGauge', value=lightPercent, max=100, min=0),
+    
     dcc.Interval(id = 'intervalComponent', interval = 1 * 3000, n_intervals = 0),
     html.Div(id='hidden-div', style={'display':'none'}),
     html.Div(id='hidden-div2', style={'display':'none'})
@@ -294,34 +308,47 @@ app.layout = html.Div(children=[
 def update_led_output_div(n):
     return '{}'.format(str(ledToggle(n)))
 
-# Updates the temperature threshold when the button on the dashboard is clicked
+# Updates the fan threshold when the value of the slider is changed
 @app.callback(
-    Output('hidden-div', 'children'),
-    [Input('fan_button', 'n_clicks')],
-    [State('fan_input','value')],
-    )
-def update_fan_threshhold(clicks, input_value):
-    if clicks is not None:
-        global tempThresh
-        tempThresh = input_value
-        global setTempThresh
-        setTempThresh = True
-    return input_value
+    dash.dependencies.Output('fan_input_value', 'children'),
+    [dash.dependencies.Input('fan_input', 'value')])
+def update_output(value):
+    return 'You have selected "{}"'.format(value)
+
+# Updates the temperature threshold when the button on the dashboard is clicked
+# @app.callback(
+#     Output('hidden-div', 'children'),
+#     [Input('fan_button', 'n_clicks')],
+#     [State('fan_input','value')],
+#     )
+# def update_fan_threshhold(clicks, input_value):
+#     if clicks is not None:
+#         global tempThresh
+#         tempThresh = input_value
+#         global setTempThresh
+#         setTempThresh = True
+#     return input_value
+
+# Updates the light threshold when the value of the slider is changed
+@app.callback(
+    dash.dependencies.Output('light_input_value', 'children'),
+    [dash.dependencies.Input('light_input', 'value')])
+def update_output(value):
+    return 'You have selected "{}"'.format(value)
 
 # Updates the light threshold when the button on the dashboard is clicked
-@app.callback(
-    Output('hidden-div2', 'children'),
-    [Input('light_threshold', 'n_clicks')],
-    [State('light_input','value')],
-    )
-def update_light_threshhold(clicks, input_value):
-    print("aaaaaaa")
-    if clicks is not None:
-        global lightThresh
-        lightThresh = input_value
-        global setLightThresh
-        setLightThresh = True
-    return input_value
+# @app.callback(
+#     Output('hidden-div2', 'children'),
+#     [Input('light_threshold', 'n_clicks')],
+#     [State('light_input','value')],
+#     )
+# def update_light_threshhold(clicks, input_value):
+#     if clicks is not None:
+#         global lightThresh
+#         lightThresh = input_value
+#         global setLightThresh
+#         setLightThresh = True
+#     return input_value
 
 # Updates the temperature and humidity gauges with the DHT11 info every 3 seconds 
 @app.callback([
@@ -364,6 +391,15 @@ def update_temp_gauge(n_intervals):
     ))
     return [tempGauge, humGauge]
 
+# Updates the light level gauge with the MQTT broker info every 3 seconds 
+@app.callback([
+    Output('lightGauge', 'value')],
+    [Input('intervalComponent', 'n_intervals')]
+)
+def update_light_gauge(n_intervals):
+    lightLevelCheck(lightPercent)
+    return [lightPercent]
+    
 if __name__ == '__main__':
     app.run_server()
     
