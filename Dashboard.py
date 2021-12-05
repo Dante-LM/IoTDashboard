@@ -12,7 +12,7 @@ import time, sys
 import threading as thread
 from paho.mqtt import client as mqtt_client
 
-#external_stylesheets = ['']
+# external_stylesheets = ['']
 
 # Info to connect to the MQTT Broker 
 broker = 'localhost'
@@ -36,7 +36,7 @@ Motor1E = 22
 
 # Setting the GPIO pins and variables for the different components
 led = 13
-# buzzer = which gpio?
+buzzer = 5
 
 autoLed = 26
 lightLevel = 512
@@ -51,6 +51,7 @@ fanIsOn = False
 # Setting up the led GPIO pins to output
 GPIO.setup(led, GPIO.OUT)
 GPIO.setup(autoLed, GPIO.OUT)
+GPIO.setup(buzzer, GPIO.OUT)
 
 # Connects the dashboard to the MQTT broker
 def connect_mqtt():
@@ -85,15 +86,14 @@ def run_mqtt():
     client.loop_forever()
 
 # Receives info from the LED button on the dashboard to toggle the LED on or off
-def ledToggle(n_clicks):
+def ledToggle(value):
     
-    output = n_clicks % 2
-    GPIO.output(led, output)
+    GPIO.output(led, value)
     
     outputString = ""
-    if(output == 1):
+    if(value == True):
         outputString = "LED is ON"
-    elif(output == 0):
+    elif(value == False):
         outputString = "LED is OFF"
     
     return outputString
@@ -169,10 +169,10 @@ def lightLevelCheck(currentPercent):
 #     else:
 #         ringBuzzer()
 # 
-# def ringBuzzer():
-#     GPIO.output(buzzer,GPIO.HIGH)
-#     time.sleep(3)
-#     GPIO.output(buzzer,GPIO.LOW)
+def ringBuzzer():
+    GPIO.output(buzzer,GPIO.HIGH)
+    time.sleep(3)
+    GPIO.output(buzzer,GPIO.LOW)
 
 # Sends an email with the given text
 def sendEmail(text):
@@ -231,30 +231,80 @@ except:
     print ("Error: unable to start thread")
 
 # Creates the layout for the dashboard with HTML and dash components
-app.layout = html.Div(children=[
+app.layout = html.Div(
+# style={'backgroundColor':'black',
+#        'color':'#3479f3'},
+children=[
     html.H1(children='IoT Dashboard'),
     html.H2(children='Turn On or Off the Light'),
-    html.Button('Toggle Light', id='led_button', value='toggle_light', n_clicks=0),
+    daq.ToggleSwitch(
+        id='led_button',
+        value=False,
+        color='#3479f3',
+        label='Light Toggle',
+        labelPosition='bottom'
+    ),
     html.Div(id='led_output'),
     html.Br(),
     
     html.H2(children='Fan Control'),
-    
-    dcc.Slider(id='fan_input', min=-40, max=50, step=1, value=30,),
+    daq.Slider(
+        id='fan_input',
+        color='#3479f3',
+        min=-40,
+        max=50,
+        value=tempThresh,
+        step=1,
+    ),
     html.Div(id='fan_input_value'),
     
     html.Br(),
     
     html.H2(children='Automatic Light Control'),
-    
-    dcc.Slider(id='light_input', min=0, max=100, step=1, value=50,),
+    daq.Slider(
+        id='light_input',
+        color='#3479f3',
+        min=0,
+        max=100,
+        value=lightThresh,
+        step=1,
+    ),
     html.Div(id='light_input_value'),
 
     html.Br(),
-    
-    daq.Gauge(id='tempGauge', value=info[0], max=50, min=-40),
-    daq.Gauge(id='humGauge', value=info[1], max=100, min=0),
-    daq.Gauge(id='lightGauge', value=lightPercent, max=100, min=0),
+
+    daq.Gauge(id='tempGauge',
+              label='Temperature',
+              color={'gradient':True,
+                     'ranges':{
+                         '#00008b':[-40,-20],
+                         '#0000ff':[-20,0],
+                         '#ffff00':[0,20],
+                         '#ffa500':[20,40],
+                         '#ff0000':[40,50]}},
+              scale={'start':-40,
+                     'interval':5,
+                     'labelInterval':2},
+              showCurrentValue=True,
+              units='\xb0 C', value=info[0],
+              max=50,
+              min=-40),
+    daq.Gauge(id='humGauge',
+              label='Humidity',
+              color='#3479f3',
+              showCurrentValue=True,
+              units='%',
+              value=info[1],
+              max=100,
+              min=0),
+    daq.Gauge(id='lightGauge',
+              label='Light Level',
+              color='#3479f3',
+              showCurrentValue=True,
+              units='%',
+              value=lightPercent,
+              max=100,
+              min=0),
     
     dcc.Interval(id = 'intervalComponent', interval = 1 * 3000, n_intervals = 0),
     html.Div(id='hidden-div', style={'display':'none'}),
@@ -264,10 +314,10 @@ app.layout = html.Div(children=[
 # Calls the ledToggle function when the button on the dashboard is clicked
 @app.callback(
     Output('led_output', 'children'),
-    [Input('led_button', 'n_clicks')]
+    [Input('led_button', 'value')]
 )
-def update_led_output_div(n):
-    return '{}'.format(str(ledToggle(n)))
+def update_led_output_div(value):
+    return '{}'.format(ledToggle(value))
 
 # Updates the fan threshold when the value of the slider is changed
 @app.callback(
