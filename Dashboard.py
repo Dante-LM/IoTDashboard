@@ -230,41 +230,6 @@ try:
 except:
     print ("Error: unable to start thread")
 
-# Creates the initial gauge figure for the temperature
-tempGauge = go.Figure(go.Indicator(
-    mode = "gauge+number+delta",
-    value = info[0],
-    domain = {'x': [0,1], 'y':[0,1]},
-    title = {'text':'Temperature'},
-    gauge = {
-            'axis':{'range':[-40,50]},
-            'steps':[
-                {'range':[-40,-20], 'color': "#00008b"},
-                {'range':[-20,0], 'color': "#0000ff"},
-                {'range':[0,20], 'color': "#ffff00"},
-                {'range':[20,40], 'color': "#ffa500"},
-                {'range':[40,50], 'color': "#ff0000"}
-                ],
-            'threshold':{'line':{'color':"#000000", 'width':4}, 'thickness':0.75, 'value': info[0]}
-        }
-
-    ))
-
-# Creates the inital gauge figure for the humidity
-humGauge = go.Figure(go.Indicator(
-    mode = "gauge+number+delta",
-    value = info[1],
-    domain = {'x': [0,1], 'y':[0,1]},
-    title = {'text':'Humidity'},
-    gauge = {
-            'axis':{'range':[0,100]},
-            'steps':[
-                {'range':[0,100], 'color': "#ffffff"}
-                ],
-            'threshold':{'line':{'color':"#000000", 'width':4}, 'thickness':0.75, 'value': info[1]}
-        }
-    ))
-
 # Creates the layout for the dashboard with HTML and dash components
 app.layout = html.Div(children=[
     html.H1(children='IoT Dashboard'),
@@ -278,21 +243,17 @@ app.layout = html.Div(children=[
     dcc.Slider(id='fan_input', min=-40, max=50, step=1, value=30,),
     html.Div(id='fan_input_value'),
     
-#     dcc.Input(id='fan_input', type='number', placeholder=tempThresh),
-#     html.Button('Confirm Threshold', id='fan_button', value='fan_control', n_clicks=0),
     html.Br(),
     
     html.H2(children='Automatic Light Control'),
     
     dcc.Slider(id='light_input', min=0, max=100, step=1, value=50,),
     html.Div(id='light_input_value'),
-    
-#     dcc.Input(id='light_input', type='number', placeholder='50'),
-#     html.Button('Confirm Threshold', id='light_threshold', value='light_control', n_clicks=0),
+
     html.Br(),
     
-    dcc.Graph(id='tempGauge', figure=tempGauge),
-    dcc.Graph(id='humGauge', figure=humGauge),
+    daq.Gauge(id='tempGauge', value=info[0], max=50, min=-40),
+    daq.Gauge(id='humGauge', value=info[1], max=100, min=0),
     daq.Gauge(id='lightGauge', value=lightPercent, max=100, min=0),
     
     dcc.Interval(id = 'intervalComponent', interval = 1 * 3000, n_intervals = 0),
@@ -315,20 +276,6 @@ def update_led_output_div(n):
 def update_output(value):
     return 'You have selected "{}"'.format(value)
 
-# Updates the temperature threshold when the button on the dashboard is clicked
-# @app.callback(
-#     Output('hidden-div', 'children'),
-#     [Input('fan_button', 'n_clicks')],
-#     [State('fan_input','value')],
-#     )
-# def update_fan_threshhold(clicks, input_value):
-#     if clicks is not None:
-#         global tempThresh
-#         tempThresh = input_value
-#         global setTempThresh
-#         setTempThresh = True
-#     return input_value
-
 # Updates the light threshold when the value of the slider is changed
 @app.callback(
     dash.dependencies.Output('light_input_value', 'children'),
@@ -336,60 +283,15 @@ def update_output(value):
 def update_output(value):
     return 'You have selected "{}"'.format(value)
 
-# Updates the light threshold when the button on the dashboard is clicked
-# @app.callback(
-#     Output('hidden-div2', 'children'),
-#     [Input('light_threshold', 'n_clicks')],
-#     [State('light_input','value')],
-#     )
-# def update_light_threshhold(clicks, input_value):
-#     if clicks is not None:
-#         global lightThresh
-#         lightThresh = input_value
-#         global setLightThresh
-#         setLightThresh = True
-#     return input_value
-
-# Updates the temperature and humidity gauges with the DHT11 info every 3 seconds 
+# Update the temperature and humidity gauges every 3 seconds
 @app.callback([
-    Output('tempGauge', 'figure'),
-    Output('humGauge', 'figure')],
+    Output('tempGauge', 'value'),
+    Output('humGauge', 'value')],
     [Input('intervalComponent', 'n_intervals')]
 )
-def update_temp_gauge(n_intervals):
+def update_dht_gauges(n_intervals):
     info = getDHTinfo()
-    tempGauge = go.Figure(go.Indicator(
-    mode = "gauge+number+delta",
-    value = info[0],
-    domain = {'x': [0,1], 'y':[0,1]},
-    title = {'text':'Temperature'},
-    gauge = {
-            'axis':{'range':[-40,50]},
-            'steps':[
-                {'range':[-40,-20], 'color': "#00008b"},
-                {'range':[-20,0], 'color': "#0000ff"},
-                {'range':[0,20], 'color': "#ffff00"},
-                {'range':[20,40], 'color': "#ffa500"},
-                {'range':[40,50], 'color': "#ff0000"}
-                ],
-            'threshold':{'line':{'color':"#000000", 'width':4}, 'thickness':0.75, 'value': info[0]}
-        }
-
-    ))
-    humGauge = go.Figure(go.Indicator(
-    mode = "gauge+number+delta",
-    value = info[1],
-    domain = {'x': [0,1], 'y':[0,1]},
-    title = {'text':'Humidity'},
-    gauge = {
-            'axis':{'range':[0,100]},
-            'steps':[
-                {'range':[0,100], 'color': "#ffffff"}
-                ],
-            'threshold':{'line':{'color':"#000000", 'width':4}, 'thickness':0.75, 'value': info[1]}
-        }
-    ))
-    return [tempGauge, humGauge]
+    return [info[0], info[1]]
 
 # Updates the light level gauge with the MQTT broker info every 3 seconds 
 @app.callback([
