@@ -42,7 +42,7 @@ buzzer = 5
 
 autoLed = 26
 lightLevel = 512
-lightPercent = 50
+lightPercent = 40
 lightThresh = 50
 setLightThresh = False
 
@@ -72,11 +72,12 @@ def connect_mqtt():
 def subscribeLight(client: mqtt_client):
     # Assigns the info to variables
     def on_message(client, userdata, msg):
-#         print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-        global lightLevel, lightPercent, lightThresh
-        lightLevel = int(msg.payload.decode())
-        lightPercent = round((lightLevel / 1024) * 100)
-#         print(f"LightLevel: {lightLevel} LightPercent: {lightPercent} LightThresh: {lightThresh}")
+        print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+        if(msg.topic == "SmartHome/Dashboard/lightValue"):
+#             print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+            global lightLevel, lightPercent
+            lightLevel = int(msg.payload.decode())
+            lightPercent = round((lightLevel / 1024) * 100)
     
     client.subscribe(lightTopic)
     client.on_message = on_message
@@ -87,7 +88,9 @@ def subscribeRfid(client: mqtt_client):
     def on_message(client, userdata, msg):
         if(msg.topic == "SmartHome/Dashboard/rfid"):
             print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-            checkUser(msg.payload.decode())
+            rfid = msg.payload.decode()
+            checkUser(rfid)
+            rfid = ""
     client.subscribe(rfidTopic)
     client.on_message = on_message
 
@@ -157,8 +160,10 @@ def lightLevelCheck(currentPercent):
     global lightThresh
     if(currentPercent < lightThresh):
         GPIO.output(autoLed, 1)
+#         sendEmail('The automatic lights have turned on.')
     else:
         GPIO.output(autoLed, 0)
+#         sendEmail('The automatic lights have turned off.')
         
 
 def checkUser(rfidValue):
@@ -167,25 +172,28 @@ def checkUser(rfidValue):
     password="",
     host="localhost",
     database="IoT")
- 
-    cursor = mydb.cursor()
+
+    cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE rfid =?", (rfidValue,))
     valid = cursor.fetchone()
     if(valid is not None):
         print("valid user")
         global name, temp, setTempThresh, setLightThresh, lightThresh, tempThresh
         name = valid[1]
+        sendEmail('{} has entered the house.'.format(name))
         lightThresh = valid[2]
         tempThresh = valid[3]
         
         setTempThresh = True
         setLightThresh = False
+        
+        update_output(lightThresh)
     else:
         ringBuzzer()
 
 def ringBuzzer():
     GPIO.output(buzzer,GPIO.HIGH)
-    time.sleep(3)
+    time.sleep(1)
     GPIO.output(buzzer,GPIO.LOW)
 
 # Sends an email with the given text
