@@ -282,7 +282,8 @@ app.layout = html.Div(children=[
     dcc.Graph(id='tempGauge', figure=tempGauge),
     dcc.Graph(id='humGauge', figure=humGauge),
     dcc.Interval(id = 'intervalComponent', interval = 1 * 3000, n_intervals = 0),
-    html.Div(id='hidden-div', style={'display':'none'})
+    html.Div(id='hidden-div', style={'display':'none'}),
+    html.Div(id='hidden-div2', style={'display':'none'})
 ])
 
 # Calls the ledToggle function when the button on the dashboard is clicked
@@ -309,11 +310,12 @@ def update_fan_threshhold(clicks, input_value):
 
 # Updates the light threshold when the button on the dashboard is clicked
 @app.callback(
-    Output('hidden-div', 'children'),
+    Output('hidden-div2', 'children'),
     [Input('light_threshold', 'n_clicks')],
     [State('light_input','value')],
     )
 def update_light_threshhold(clicks, input_value):
+    print("aaaaaaa")
     if clicks is not None:
         global lightThresh
         lightThresh = input_value
@@ -327,7 +329,7 @@ def update_light_threshhold(clicks, input_value):
     Output('humGauge', 'figure')],
     [Input('intervalComponent', 'n_intervals')]
 )
-def update_gauges(n_intervals):
+def update_temp_gauge(n_intervals):
     info = getDHTinfo()
     tempGauge = go.Figure(go.Indicator(
     mode = "gauge+number+delta",
@@ -361,7 +363,6 @@ def update_gauges(n_intervals):
         }
     ))
     return [tempGauge, humGauge]
-
 
 if __name__ == '__main__':
     app.run_server()
