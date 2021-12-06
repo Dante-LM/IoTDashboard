@@ -7,8 +7,7 @@ from dash.dependencies import Input, Output, State
 import RPi.GPIO as GPIO
 import board, adafruit_dht
 import smtplib, ssl, email, imaplib
-from time import sleep
-import time, sys
+import time, datetime, sys
 import threading as thread
 from paho.mqtt import client as mqtt_client
 import mariadb
@@ -44,10 +43,10 @@ buzzer = 5
 autoLed = 26
 lightLevel = 512
 lightPercent = 40
-lightThresh = 50
+lightThresh = 10
 setLightThresh = False
 
-tempThresh = 30
+tempThresh = 40
 setTempThresh = False
 fanIsOn = False
 
@@ -76,10 +75,10 @@ def subscribe(client: mqtt_client):
         if(msg.topic == 'SmartHome/Dashboard/rfid'):
             print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
             rfid = msg.payload.decode()
-            checkUser(rfid)
+            checkUser(123)
             rfid = ""
         if(msg.topic == 'SmartHome/Dashboard/lightValue'):
-            print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+#             print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
             global lightLevel, lightPercent
             lightLevel = int(msg.payload.decode())
             lightPercent = round((lightLevel / 1024) * 100)    
@@ -168,17 +167,18 @@ def checkUser(rfidValue):
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users WHERE rfid =?", (rfidValue,))
     valid = cursor.fetchone()
+    currentTime = datetime.datetime.now()
     if(valid is not None):
-        print("valid user")
         global name, temp, setTempThresh, setLightThresh, lightThresh, tempThresh
         name = valid[1]
-        sendEmail('{} has entered the house.'.format(name))
+        sendEmail('{} has opened the door at: {}.'.format(name, currentTime.strftime("%d/%m/%Y %H:%M:%S")))
         lightThresh = valid[2]
         tempThresh = valid[3]
         
         setTempThresh = True
         setLightThresh = False        
     else:
+        sendEmail('An unauthorized user has tried to open the door at: {}.'.format(currentTime.strftime("%d/%m/%Y %H:%M:%S")))
         ringBuzzer()
 
 def ringBuzzer():
