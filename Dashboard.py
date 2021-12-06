@@ -1,5 +1,5 @@
 import plotly.graph_objects as go
-import dash
+import dash, dash_table
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_daq as daq
@@ -317,6 +317,11 @@ children=[
               value=lightPercent,
               max=100,
               min=0),
+    
+    dash_table.DataTable(
+            id='table',
+            columns=[{"id": 'aaa', "rssi": 'bbb'}],
+            data={'':''}),
     
     dcc.Interval(id = 'intervalComponent', interval = 1 * 3000, n_intervals = 0),
     html.Div(id='hidden-div', style={'display':'none'}),
