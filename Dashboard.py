@@ -75,7 +75,7 @@ def subscribe(client: mqtt_client):
         if(msg.topic == 'SmartHome/Dashboard/rfid'):
             print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
             rfid = msg.payload.decode()
-            checkUser(123)
+            checkUser(rfid)
             rfid = ""
         if(msg.topic == 'SmartHome/Dashboard/lightValue'):
 #             print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
@@ -360,12 +360,14 @@ def update_dht_gauges(n_intervals):
 
 # Updates the light level gauge with the MQTT broker info every 3 seconds 
 @app.callback([
-    Output('lightGauge', 'value')],
+    Output('lightGauge', 'value'),
+    Output('light_input', 'value')],
     [Input('intervalComponent', 'n_intervals')]
 )
 def update_light_gauge(n_intervals):
+    global lightThresh
     lightLevelCheck(lightPercent)
-    return [lightPercent]
+    return [lightPercent, lightThresh]
     
 if __name__ == '__main__':
     app.run_server()
