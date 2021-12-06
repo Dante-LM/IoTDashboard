@@ -20,6 +20,7 @@ broker = 'localhost'
 port = 1883
 lightTopic = "SmartHome/Dashboard/lightValue"
 rfidTopic = "SmartHome/Dashboard/rfid"
+topics = [(lightTopic, 0), (rfidTopic, 0)]
 client_id = '1'
 
 # Setting the GPIO pin for the DHT11 temperature/humidity sensor
@@ -69,36 +70,26 @@ def connect_mqtt():
     return client
 
 # Fetches the info for the current liht level from the MQTT broker
-def subscribeLight(client: mqtt_client):
+def subscribe(client: mqtt_client):
     # Assigns the info to variables
     def on_message(client, userdata, msg):
-        print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-        if(msg.topic == "SmartHome/Dashboard/lightValue"):
-#             print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
-            global lightLevel, lightPercent
-            lightLevel = int(msg.payload.decode())
-            lightPercent = round((lightLevel / 1024) * 100)
-    
-    client.subscribe(lightTopic)
-    client.on_message = on_message
-    
-# Fetches the info for the RFID from the MQTT broker
-def subscribeRfid(client: mqtt_client):
-    # Assigns the info to variables
-    def on_message(client, userdata, msg):
-        if(msg.topic == "SmartHome/Dashboard/rfid"):
+        if(msg.topic == 'SmartHome/Dashboard/rfid'):
             print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
             rfid = msg.payload.decode()
             checkUser(rfid)
             rfid = ""
-    client.subscribe(rfidTopic)
+        if(msg.topic == 'SmartHome/Dashboard/lightValue'):
+            print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+            global lightLevel, lightPercent
+            lightLevel = int(msg.payload.decode())
+            lightPercent = round((lightLevel / 1024) * 100)    
+    client.subscribe(topics)
     client.on_message = on_message
 
-# Creates a client and connects it to the broker
+# Creates a client, connects it to the broker, and subscribes to the topics
 def run_mqtt():
     client = connect_mqtt()
-    subscribeLight(client)
-    subscribeRfid(client)
+    subscribe(client)
     client.loop_forever()
 
 # Receives info from the LED button on the dashboard to toggle the LED on or off
@@ -114,8 +105,9 @@ def ledToggle(value):
     
     return outputString
 
-# Receives the temperature and humidity from the DHT11
-# If the temperature exceeds the threshhold, an email will be sent to the email to turn on a fan or not
+# Receives the temperature and humidity from the DHT11.
+# If the temperature exceeds the threshhold, an email will
+# be sent to the email to turn on a fan or not
 def getDHTinfo():
     currentTemp = dhtDevice.temperature
     currentHumidity = dhtDevice.humidity
@@ -185,9 +177,7 @@ def checkUser(rfidValue):
         tempThresh = valid[3]
         
         setTempThresh = True
-        setLightThresh = False
-        
-        update_output(lightThresh)
+        setLightThresh = False        
     else:
         ringBuzzer()
 
