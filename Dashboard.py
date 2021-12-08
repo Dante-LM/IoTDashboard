@@ -7,7 +7,7 @@ from dash.dependencies import Input, Output, State
 import RPi.GPIO as GPIO
 import board, adafruit_dht
 import smtplib, ssl, email, imaplib
-import time, datetime, sys
+import time, datetime, sys, os, re
 import threading as thread
 from paho.mqtt import client as mqtt_client
 import mariadb
@@ -233,6 +233,28 @@ def receiveEmailChecker() :
             else:
                 return "Invalid"
 
+# Scans for bluetooth devices and puts them to a dictionary. 
+def getBluetoothDevices():
+    os.system('sudo node bluetoothSearch.js > output.txt')
+    devicesFound = []
+    rssiFound = []
+    deviceDict = {}
+    with open('output.txt') as foundDevices:
+        parsedFile = foundDevices.read().splitlines()
+
+    for line in parsedFile:
+        rssi = 0
+        deviceId = ""
+        if "deviceId:" in line:
+            deviceId = line.split("'")[1::2]
+            devicesFound.append(deviceId)
+        if "rssi:" in line:
+            rssi = int(re.search(r'\d+', line).group(0))
+            rssiFound.append(rssi)
+    for i in range(len(devicesFound)):
+        deviceDict[devicesFound[i][0]] = rssiFound[i]
+    return deviceDict
+
 # Gets the initial info from the DHT11
 info = getDHTinfo()
 
@@ -244,12 +266,10 @@ except:
 
 # Creates the layout for the dashboard with HTML and dash components
 app.layout = html.Div(
-# style={'backgroundColor':'black',
-#        'color':'#3479f3'},
 children=[
     html.H1(children='IoT Dashboard'),
-    html.H2(children='Turn On or Off the Light'),
     daq.ToggleSwitch(
+        style={'display':'inline-block'},
         id='led_button',
         value=False,
         color='#3479f3',
@@ -259,7 +279,7 @@ children=[
     html.Div(id='led_output'),
     html.Br(),
     
-    html.H2(children='Fan Control'),
+    html.H2(children='Fan Control and Light Control'),
     daq.Slider(
         id='fan_input',
         color='#3479f3',
@@ -269,10 +289,6 @@ children=[
         step=1,
     ),
     html.Div(id='fan_input_value'),
-    
-    html.Br(),
-    
-    html.H2(children='Automatic Light Control'),
     daq.Slider(
         id='light_input',
         color='#3479f3',
@@ -282,10 +298,12 @@ children=[
         step=1,
     ),
     html.Div(id='light_input_value'),
-
+    
     html.Br(),
-
-    daq.Gauge(id='tempGauge',
+    
+    daq.Gauge(
+              style={'display':'inline-block'},
+              id='tempGauge',
               label='Temperature',
               color={'gradient':True,
                      'ranges':{
@@ -301,7 +319,8 @@ children=[
               units='\xb0 C', value=info[0],
               max=50,
               min=-40),
-    daq.Gauge(id='humGauge',
+    daq.Gauge(
+              style={'display':'inline-block'},id='humGauge',
               label='Humidity',
               color='#3479f3',
               showCurrentValue=True,
@@ -309,7 +328,9 @@ children=[
               value=info[1],
               max=100,
               min=0),
-    daq.Gauge(id='lightGauge',
+    daq.Gauge(
+              style={'display':'inline-block'},
+              id='lightGauge',
               label='Light Level',
               color='#3479f3',
               showCurrentValue=True,
@@ -318,15 +339,28 @@ children=[
               max=100,
               min=0),
     
-    dash_table.DataTable(
-            id='table',
-            columns=[{"id": 'aaa', "rssi": 'bbb'}],
-            data={'':''}),
+    html.Button('Detect Bluetooth Devices',
+                style={'display':'inline-block'},
+                id='bluetoothButton',
+                n_clicks=0),
+    html.Div('0',style={'display':'inline-block'},id='bluetooth_output'),
+    
+    html.Br(),
     
     dcc.Interval(id = 'intervalComponent', interval = 1 * 3000, n_intervals = 0),
     html.Div(id='hidden-div', style={'display':'none'}),
     html.Div(id='hidden-div2', style={'display':'none'})
 ])
+
+# Calls the bluetooth detection method when the button is pressed. Displays the count
+# of nearby devices.
+@app.callback(
+    Output('bluetooth_output', 'children'),
+    [Input('bluetoothButton', 'n_clicks')]
+)
+def update_bluetooth_div(n_clicks):
+    deviceCount = getBluetoothDevices()
+    return '{}'.format(len(deviceCount))
 
 # Calls the ledToggle function when the button on the dashboard is clicked
 @app.callback(
@@ -341,7 +375,7 @@ def update_led_output_div(value):
     dash.dependencies.Output('fan_input_value', 'children'),
     [dash.dependencies.Input('fan_input', 'value')])
 def update_output(value):
-    return 'You have selected "{}"'.format(value)
+    return 'Temperature threshold set to {}\xb0 C'.format(value)
 
 # Updates the light threshold when the value of the slider is changed
 @app.callback(
@@ -351,7 +385,7 @@ def update_output(value):
     global lightThresh, lightPercent
     lightThresh = value
     lightLevelCheck(lightPercent)
-    return 'You have selected "{}"'.format(value)
+    return 'Light percentage threshold set to {}%'.format(value)
 
 # Update the temperature and humidity gauges every 3 seconds
 @app.callback([

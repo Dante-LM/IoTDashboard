@@ -9,8 +9,8 @@ Raddec {
        rssiSum: -70 } ],
   packets:
    [ '061b66554433221102010611074449555520657669746341796c656572' ],
-  earliestDecodingTime: 1638757994445,
-  creationTime: 1638757994450 }
+  earliestDecodingTime: 1638923994263,
+  creationTime: 1638923994267 }
 Raddec {
   transmitterId: '112233445566',
   transmitterIdType: 2,
@@ -22,5 +22,5 @@ Raddec {
        rssiSum: -71 } ],
   packets:
    [ '061b66554433221102010611074449555520657669746341796c656572' ],
-  earliestDecodingTime: 1638757995448,
-  creationTime: 1638757995449 }
+  earliestDecodingTime: 1638923995265,
+  creationTime: 1638923995265 }
