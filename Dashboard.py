@@ -156,7 +156,7 @@ def lightLevelCheck(currentPercent):
         GPIO.output(autoLed, 0)
 #         sendEmail('The automatic lights have turned off.')
         
-
+# Checks the local database for a user matching the given RFID tag id. Sends an email with the name of the user who scanned, or if an unauthorized user attempted access and will ring an alarm.
 def checkUser(rfidValue):
     conn = mariadb.connect(
     user="root",
