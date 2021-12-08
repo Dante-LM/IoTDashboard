@@ -268,7 +268,7 @@ except:
 # Creates the layout for the dashboard with HTML and dash components
 app.layout = html.Div(
 children=[
-    html.H1(children='IoT Dashboard'),
+    html.H1(children='Welcome to the Overseer Dashboard'),
     daq.ToggleSwitch(
         style={'display':'inline-block'},
         id='led_button',
