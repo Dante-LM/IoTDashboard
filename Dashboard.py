@@ -192,7 +192,7 @@ def sendEmail(text):
     password = "vanieriotemail321"
     receiver = "dantelomonaco.iot2@gmail.com"
     port = 465
-    subject = "From Dante's RPI"
+    subject = "From Overseer Home System"
     message = 'Subject: {}\n\n{}'.format(subject, text)
     context = ssl.create_default_context()
     print("sending")
