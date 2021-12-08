@@ -234,7 +234,7 @@ def receiveEmailChecker() :
                 return "Invalid"
 
 # Scans for bluetooth devices and puts them to a dictionary. 
-def getBluetoothDevices():
+def getBluetoothDevices(rssiThreshold):
     os.system('sudo node bluetoothSearch.js > output.txt')
     devicesFound = []
     rssiFound = []
@@ -252,7 +252,8 @@ def getBluetoothDevices():
             rssi = int(re.search(r'\d+', line).group(0))
             rssiFound.append(rssi)
     for i in range(len(devicesFound)):
-        deviceDict[devicesFound[i][0]] = rssiFound[i]
+        if (rssiThreshold > deviceDict[devicesFound[i][0]]):
+            deviceDict[devicesFound[i][0]] = rssiFound[i]
     return deviceDict
 
 # Gets the initial info from the DHT11
@@ -339,6 +340,7 @@ children=[
               max=100,
               min=0),
     
+    dcc.Input(style={'display':'inline-block'},id='rssi_input', type='number', value='0'),
     html.Button('Detect Bluetooth Devices',
                 style={'display':'inline-block'},
                 id='bluetoothButton',
@@ -356,10 +358,11 @@ children=[
 # of nearby devices.
 @app.callback(
     Output('bluetooth_output', 'children'),
-    [Input('bluetoothButton', 'n_clicks')]
+    [Input('bluetoothButton', 'n_clicks'),
+     Input('rssi_input', 'value')]
 )
-def update_bluetooth_div(n_clicks):
-    deviceCount = getBluetoothDevices()
+def update_bluetooth_div(n_clicks, value):
+    deviceCount = getBluetoothDevices(value)
     return '{}'.format(len(deviceCount))
 
 # Calls the ledToggle function when the button on the dashboard is clicked
